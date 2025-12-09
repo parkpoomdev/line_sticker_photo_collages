@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Collage - Grid Maker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 1.1em;
+      opacity: 0.9;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .card h2 {
+      font-size: 1.5em;
+      color: #333;
+      margin-bottom: 20px;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    input[type="file"],
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: border-color 0.3s;
+    }
+
+    input[type="file"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      cursor: pointer;
+    }
+
+    .preview-container {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 2px dashed #ddd;
+      min-height: 100px;
+    }
+
+    .preview-item {
+      background: white;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .preview-item img {
+      max-height: 50px;
+      max-width: 50px;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+
+    .preview-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.9em;
+    }
+
+    .remove-btn {
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: background 0.3s;
+    }
+
+    .remove-btn:hover {
+      background: #ff5252;
+    }
+
+    .layout-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .layout-btn {
+      padding: 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .layout-btn:hover {
+      border-color: #667eea;
+      background: #f0f0ff;
+    }
+
+    .layout-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .export-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .export-btn {
+      padding: 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .export-btn:hover {
+      border-color: #764ba2;
+      background: #f0e6ff;
+    }
+
+    .export-btn.active {
+      background: #764ba2;
+      color: white;
+      border-color: #764ba2;
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    button {
+      padding: 15px 30px;
+      font-size: 1em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-create {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-create:hover:not(:disabled) {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-create:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-clear {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-clear:hover {
+      background: #e0e0e0;
+    }
+
+    .preview-section {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      display: none;
+    }
+
+    .preview-section.active {
+      display: block;
+    }
+
+    .preview-section h2 {
+      font-size: 1.5em;
+      color: #333;
+      margin-bottom: 20px;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .collage-preview {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .collage-preview img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .collage-info {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.95em;
+      color: #555;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .download-btn {
+      background: #51cf66;
+      color: white;
+      padding: 15px 40px;
+      font-size: 1.05em;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .download-btn:hover {
+      background: #40c057;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(81, 207, 102, 0.4);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 30px;
+      display: none;
+    }
+
+    .loading.active {
+      display: block;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .message {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+      border-left: 4px solid;
+    }
+
+    .message.active {
+      display: block;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border-color: #51cf66;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border-color: #ff6b6b;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 1.8em;
+      }
+
+      .layout-options,
+      .export-options {
+        grid-template-columns: 1fr;
+      }
+
+      .action-buttons {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎨 Image Collage Maker</h1>
+      <p class="subtitle">Combine multiple images into beautiful grid layouts</p>
+    </header>
+
+    <div class="main-content">
+      <!-- Upload Section -->
+      <div class="card">
+        <h2>📤 Upload Images</h2>
+        <div class="form-group">
+          <label for="imageInput">Select Multiple Images</label>
+          <div class="file-input-wrapper">
+            <input
+              type="file"
+              id="imageInput"
+              multiple
+              accept="image/*"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Selected Images</label>
+          <div class="preview-container" id="previewContainer">
+            <p style="text-align: center; color: #999;">No images selected</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Section -->
+      <div class="card">
+        <h2>⚙️ Settings</h2>
+
+        <div class="form-group">
+          <label>Grid Layout</label>
+          <div class="layout-options" id="layoutOptions">
+            <button class="layout-btn" data-cols="1">1 Column</button>
+            <button class="layout-btn" data-cols="2">2 Columns</button>
+            <button class="layout-btn" data-cols="3">3 Columns</button>
+            <button class="layout-btn" data-cols="4">4 Columns</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Export Size</label>
+          <div class="export-options" id="exportOptions">
+            <button class="export-btn" data-mode="original">
+              📦 Original
+            </button>
+            <button class="export-btn" data-mode="line-protocol">
+              📐 240 x 240
+            </button>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn-create" id="createBtn" disabled>
+            ✨ Create Collage
+          </button>
+          <button class="btn-clear" id="clearBtn">🔄 Clear All</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview Section -->
+    <div class="preview-section" id="previewSection">
+      <h2>✅ Collage Preview</h2>
+      <div class="message" id="messageBox"></div>
+      <div class="loading" id="loadingBox">
+        <div class="spinner"></div>
+        <p>Creating your collage... This may take a moment.</p>
+      </div>
+      <div id="collageContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    let selectedImages = [];
+    let selectedLayout = 1;
+    let selectedExport = 'original';
+
+    const imageInput = document.getElementById('imageInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const layoutOptions = document.getElementById('layoutOptions');
+    const exportOptions = document.getElementById('exportOptions');
+    const createBtn = document.getElementById('createBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const previewSection = document.getElementById('previewSection');
+    const messageBox = document.getElementById('messageBox');
+    const loadingBox = document.getElementById('loadingBox');
+    const collageContainer = document.getElementById('collageContainer');
+
+    // File input handler
+    imageInput.addEventListener('change', (e) => {
+      selectedImages = Array.from(e.target.files);
+      updatePreview();
+      createBtn.disabled = selectedImages.length === 0;
+    });
+
+    // Layout selection
+    layoutOptions.addEventListener('click', (e) => {
+      if (e.target.classList.contains('layout-btn')) {
+        document
+          .querySelectorAll('.layout-btn')
+          .forEach((btn) => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        selectedLayout = parseInt(e.target.dataset.cols);
+      }
+    });
+
+    // Export mode selection
+    exportOptions.addEventListener('click', (e) => {
+      if (e.target.classList.contains('export-btn')) {
+        document
+          .querySelectorAll('.export-btn')
+          .forEach((btn) => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        selectedExport = e.target.dataset.mode;
+      }
+    });
+
+    // Set default selections
+    document
+      .querySelector('[data-cols="1"]')
+      .classList.add('active');
+    document
+      .querySelector('[data-mode="original"]')
+      .classList.add('active');
+
+    // Update preview
+    function updatePreview() {
+      if (selectedImages.length === 0) {
+        previewContainer.innerHTML =
+          '<p style="text-align: center; color: #999;">No images selected</p>';
+        return;
+      }
+
+      previewContainer.innerHTML = selectedImages
+        .map(
+          (image, index) => `
+        <div class="preview-item">
+          <img src="${URL.createObjectURL(image)}" alt="preview" />
+          <span class="preview-name">${image.name}</span>
+          <button class="remove-btn" onclick="removeImage(${index})">Remove</button>
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    // Remove image
+    window.removeImage = function (index) {
+      selectedImages.splice(index, 1);
+      const dt = new DataTransfer();
+      selectedImages.forEach((image) => dt.items.add(image));
+      imageInput.files = dt.files;
+      updatePreview();
+      createBtn.disabled = selectedImages.length === 0;
+    };
+
+    // Clear all
+    clearBtn.addEventListener('click', () => {
+      imageInput.value = '';
+      selectedImages = [];
+      updatePreview();
+      createBtn.disabled = true;
+      previewSection.classList.remove('active');
+      collageContainer.innerHTML = '';
+    });
+
+    // Show message
+    function showMessage(text, type) {
+      messageBox.textContent = text;
+      messageBox.className = `message active ${type}`;
+    }
+
+    // Create collage
+    createBtn.addEventListener('click', async () => {
+      if (selectedImages.length === 0) {
+        showMessage('Please select images first', 'error');
+        return;
+      }
+
+      try {
+        // Upload images
+        showMessage('Uploading images...', 'success');
+        const formData = new FormData();
+        selectedImages.forEach((image) => formData.append('images', image));
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!uploadRes.ok) throw new Error('Upload failed');
+
+        const uploadData = await uploadRes.json();
+        const imagePaths = uploadData.files;
+
+        // Create collage
+        previewSection.classList.add('active');
+        loadingBox.classList.add('active');
+        messageBox.classList.remove('active');
+
+        const collageRes = await fetch('/api/collage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imagePaths,
+            cols: selectedLayout,
+            exportMode: selectedExport
+          })
+        });
+
+        if (!collageRes.ok) throw new Error('Collage creation failed');
+
+        const collageData = await collageRes.json();
+        loadingBox.classList.remove('active');
+
+        // Display collage
+        const { collage, dimensions } = collageData;
+        collageContainer.innerHTML = `
+          <div class="collage-preview">
+            <img src="/assets/${collage}" alt="collage" onload="this.style.opacity=1" style="opacity:0; transition: opacity 0.3s;" />
+          </div>
+          <div class="collage-info">
+            <div class="info-row">
+              <span class="info-label">Dimensions:</span>
+              <span>${dimensions.width} x ${dimensions.height} px</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Layout:</span>
+              <span>${dimensions.cols} columns × ${dimensions.rows} rows</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Tile Size:</span>
+              <span>${dimensions.tileWidth} x ${dimensions.tileHeight} px</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Total Images:</span>
+              <span>${selectedImages.length}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">File:</span>
+              <span style="font-family: monospace; font-size: 0.9em;">${collage}</span>
+            </div>
+          </div>
+          <a href="/api/download/${collage}" download="${collage}" class="download-btn">
+            ⬇️ Download Collage (PNG)
+          </a>
+        `;
+
+        showMessage('✅ Collage created successfully!', 'success');
+      } catch (error) {
+        console.error('Error:', error);
+        loadingBox.classList.remove('active');
+        showMessage(`Error: ${error.message}`, 'error');
+      }
+    });
+  </script>
+</body>
+</html>

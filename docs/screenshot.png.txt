@@ -1,0 +1,2 @@
+Please manually save the screenshot image from the attachment to:
+/Users/user/Desktop/devspace/image_collage/docs/screenshot.png

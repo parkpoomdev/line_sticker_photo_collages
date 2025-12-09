@@ -179,34 +179,6 @@
       border-color: #667eea;
     }
 
-    .export-options {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .export-btn {
-      padding: 15px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      background: white;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s;
-      text-align: center;
-    }
-
-    .export-btn:hover {
-      border-color: #764ba2;
-      background: #f0e6ff;
-    }
-
-    .export-btn.active {
-      background: #764ba2;
-      color: white;
-      border-color: #764ba2;
-    }
-
     .action-buttons {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -316,6 +288,39 @@
       box-shadow: 0 5px 20px rgba(81, 207, 102, 0.4);
     }
 
+    .collage-previews {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .collage-card {
+      border: 1px solid #eaeaea;
+      border-radius: 12px;
+      padding: 16px;
+      background: #fff;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    .collage-card h3 {
+      margin-bottom: 6px;
+      color: #333;
+    }
+
+    .collage-card .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #eef2ff;
+      color: #5568d3;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .collage-card .download-btn {
+      margin-top: 8px;
+    }
+
     .loading {
       text-align: center;
       padding: 30px;
@@ -369,6 +374,11 @@
       border-color: #ff6b6b;
     }
 
+    .empty-preview {
+      text-align: center;
+      color: #999;
+    }
+
     @media (max-width: 768px) {
       .main-content {
         grid-template-columns: 1fr;
@@ -415,7 +425,7 @@
         <div class="form-group">
           <label>Selected Images</label>
           <div class="preview-container" id="previewContainer">
-            <p style="text-align: center; color: #999;">No images selected</p>
+            <p class="empty-preview">No images selected</p>
           </div>
         </div>
       </div>
@@ -431,18 +441,6 @@
             <button class="layout-btn" data-cols="2">2 Columns</button>
             <button class="layout-btn" data-cols="3">3 Columns</button>
             <button class="layout-btn" data-cols="4">4 Columns</button>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Export Size</label>
-          <div class="export-options" id="exportOptions">
-            <button class="export-btn" data-mode="original">
-              📦 Original
-            </button>
-            <button class="export-btn" data-mode="line-protocol">
-              📐 240 x 240
-            </button>
           </div>
         </div>
 
@@ -470,12 +468,10 @@
   <script>
     let selectedImages = [];
     let selectedLayout = 1;
-    let selectedExport = 'original';
 
     const imageInput = document.getElementById('imageInput');
     const previewContainer = document.getElementById('previewContainer');
     const layoutOptions = document.getElementById('layoutOptions');
-    const exportOptions = document.getElementById('exportOptions');
     const createBtn = document.getElementById('createBtn');
     const clearBtn = document.getElementById('clearBtn');
     const previewSection = document.getElementById('previewSection');
@@ -501,23 +497,9 @@
       }
     });
 
-    // Export mode selection
-    exportOptions.addEventListener('click', (e) => {
-      if (e.target.classList.contains('export-btn')) {
-        document
-          .querySelectorAll('.export-btn')
-          .forEach((btn) => btn.classList.remove('active'));
-        e.target.classList.add('active');
-        selectedExport = e.target.dataset.mode;
-      }
-    });
-
-    // Set default selections
+    // Set default selection
     document
       .querySelector('[data-cols="1"]')
-      .classList.add('active');
-    document
-      .querySelector('[data-mode="original"]')
       .classList.add('active');
 
     // Update preview
@@ -600,8 +582,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             imagePaths,
-            cols: selectedLayout,
-            exportMode: selectedExport
+            cols: selectedLayout
           })
         });
 
@@ -610,37 +591,60 @@
         const collageData = await collageRes.json();
         loadingBox.classList.remove('active');
 
-        // Display collage
-        const { collage, dimensions } = collageData;
+        const { collages } = collageData;
+        const order = ['original', 'lineProtocol'];
+
+        const labels = {
+          original: { title: 'Original Size', note: 'Max dimensions per image' },
+          lineProtocol: { title: '240 x 240', note: 'LINE sticker format' }
+        };
+
         collageContainer.innerHTML = `
-          <div class="collage-preview">
-            <img src="/assets/${collage}" alt="collage" onload="this.style.opacity=1" style="opacity:0; transition: opacity 0.3s;" />
+          <div class="collage-previews">
+            ${order
+              .map((key) => {
+                const data = collages?.[key];
+                if (!data) return '';
+                const dims = data.dimensions;
+                return `
+                  <div class="collage-card">
+                    <div class="collage-card-header">
+                      <h3>${labels[key].title}</h3>
+                      <span class="badge">${labels[key].note}</span>
+                    </div>
+                    <div class="collage-preview">
+                      <img src="/assets/${data.filename}" alt="${labels[key].title}" onload="this.style.opacity=1" style="opacity:0; transition: opacity 0.3s;" />
+                    </div>
+                    <div class="collage-info">
+                      <div class="info-row">
+                        <span class="info-label">Dimensions:</span>
+                        <span>${dims.width} x ${dims.height} px</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Layout:</span>
+                        <span>${dims.cols} columns × ${dims.rows} rows</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Tile Size:</span>
+                        <span>${dims.tileWidth} x ${dims.tileHeight} px</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Total Images:</span>
+                        <span>${selectedImages.length}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">File:</span>
+                        <span style="font-family: monospace; font-size: 0.9em;">${data.filename}</span>
+                      </div>
+                    </div>
+                    <a href="/api/download/${data.filename}" download="${data.filename}" class="download-btn">
+                      ⬇️ Download ${labels[key].title}
+                    </a>
+                  </div>
+                `;
+              })
+              .join('')}
           </div>
-          <div class="collage-info">
-            <div class="info-row">
-              <span class="info-label">Dimensions:</span>
-              <span>${dimensions.width} x ${dimensions.height} px</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Layout:</span>
-              <span>${dimensions.cols} columns × ${dimensions.rows} rows</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Tile Size:</span>
-              <span>${dimensions.tileWidth} x ${dimensions.tileHeight} px</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Total Images:</span>
-              <span>${selectedImages.length}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">File:</span>
-              <span style="font-family: monospace; font-size: 0.9em;">${collage}</span>
-            </div>
-          </div>
-          <a href="/api/download/${collage}" download="${collage}" class="download-btn">
-            ⬇️ Download Collage (PNG)
-          </a>
         `;
 
         showMessage('✅ Collage created successfully!', 'success');

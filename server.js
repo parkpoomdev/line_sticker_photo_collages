@@ -41,10 +41,10 @@ app.post("/api/upload", upload.array("images", 100), (req, res) => {
   res.json({ success: true, files: filePaths });
 });
 
-// Create collage
+// Create collage (returns both original and 240x240 versions)
 app.post("/api/collage", async (req, res) => {
   try {
-    const { imagePaths, cols, exportMode } = req.body;
+    const { imagePaths, cols } = req.body;
 
     if (!imagePaths || imagePaths.length === 0) {
       return res.status(400).json({ error: "No images provided" });
@@ -68,91 +68,104 @@ app.post("/api/collage", async (req, res) => {
       return res.status(400).json({ error: "No valid images to process" });
     }
 
-    // Determine tile size based on export mode
-    let tileWidth, tileHeight;
+    const timestamp = Date.now();
 
-    if (exportMode === "line-protocol") {
-      // Line protocol: 240 x 240
-      tileWidth = 240;
-      tileHeight = 240;
-    } else {
-      // Original size: use largest dimensions or average
-      tileWidth = Math.max(...imageMetadata.map((img) => img.width));
-      tileHeight = Math.max(...imageMetadata.map((img) => img.height));
-    }
+    // Helper to build a collage for a given mode
+    const buildCollage = async (mode) => {
+      const isLineProtocol = mode === "line-protocol";
+      const tileWidth = isLineProtocol
+        ? 240
+        : Math.max(500, ...imageMetadata.map((img) => img.width || 0));
+      const tileHeight = isLineProtocol
+        ? 240
+        : Math.max(500, ...imageMetadata.map((img) => img.height || 0));
 
-    // Create composite image
-    const canvasWidth = tileWidth * cols_num;
-    const canvasHeight = tileHeight * rows;
+      let canvasWidth = tileWidth * cols_num;
+      let canvasHeight = tileHeight * rows;
 
-    // Create a blank canvas
-    let composite = sharp({
-      create: {
-        width: canvasWidth,
-        height: canvasHeight,
-        channels: 3,
-        background: { r: 255, g: 255, b: 255 },
-      },
-    });
+      const overlays = [];
+      for (let i = 0; i < imageMetadata.length; i++) {
+        const col = i % cols_num;
+        const row = Math.floor(i / cols_num);
+        const left = col * tileWidth;
+        const top = row * tileHeight;
 
-    // Prepare image overlays
-    const overlays = [];
-    for (let i = 0; i < imageMetadata.length; i++) {
-      const col = i % cols_num;
-      const row = Math.floor(i / cols_num);
-      const left = col * tileWidth;
-      const top = row * tileHeight;
+        const resizedImageBuffer = await sharp(imageMetadata[i].path)
+          .resize(tileWidth, tileHeight, {
+            fit: "cover",
+            position: "center",
+          })
+          .toBuffer();
 
-      // Resize image to tile size
-      const resizedImageBuffer = await sharp(imageMetadata[i].path)
-        .resize(tileWidth, tileHeight, {
-          fit: "cover",
-          position: "center",
-        })
+        overlays.push({
+          input: resizedImageBuffer,
+          left,
+          top,
+        });
+      }
+
+      let collageBuffer = await sharp({
+        create: {
+          width: canvasWidth,
+          height: canvasHeight,
+          channels: 3,
+          background: { r: 255, g: 255, b: 255 },
+        },
+      })
+        .composite(overlays)
+        .png({ quality: 100, compressionLevel: 6 })
         .toBuffer();
 
-      overlays.push({
-        input: resizedImageBuffer,
-        left,
-        top,
-      });
-    }
+      // For line-protocol mode, scale the final collage to exactly 240x240
+      if (isLineProtocol) {
+        collageBuffer = await sharp(collageBuffer)
+          .resize(240, 240, {
+            fit: "contain",
+            background: { r: 255, g: 255, b: 255 },
+          })
+          .png({ quality: 100, compressionLevel: 6 })
+          .toBuffer();
+        canvasWidth = 240;
+        canvasHeight = 240;
+      }
 
-    // Apply all overlays to composite and ensure PNG format
-    const collageBuffer = await composite
-      .composite(overlays)
-      .png({ quality: 100, compressionLevel: 6 })
-      .toBuffer();
+      const filename = `collage-${mode}-${timestamp}.png`;
+      const outputPath = path.join("output", filename);
+      await fs.promises.writeFile(outputPath, collageBuffer);
 
-    // Save collage to output folder
-    const timestamp = Date.now();
-    const filename = `collage-${timestamp}.png`;
-    const outputPath = path.join("output", filename);
-    await fs.promises.writeFile(outputPath, collageBuffer);
+      const assetsPath = path.join("public", "assets", filename);
+      await fs.promises.writeFile(assetsPath, collageBuffer);
 
-    // Also save to public/assets for preview
-    const assetsPath = path.join("public", "assets", filename);
-    await fs.promises.writeFile(assetsPath, collageBuffer);
+      return {
+        filename,
+        dimensions: {
+          width: canvasWidth,
+          height: canvasHeight,
+          cols: cols_num,
+          rows,
+          tileWidth,
+          tileHeight,
+        },
+      };
+    };
+
+    const original = await buildCollage("original");
+    const lineProtocol = await buildCollage("line-protocol");
 
     // Clean up uploaded files
-    for (const imagePath of imagePaths) {
-      try {
-        await fs.promises.unlink(imagePath);
-      } catch (err) {
-        console.error(`Error deleting ${imagePath}:`, err);
-      }
-    }
+    await Promise.all(
+      imagePaths.map((imagePath) =>
+        fs.promises
+          .unlink(imagePath)
+          .catch((err) => console.error(`Error deleting ${imagePath}:`, err))
+      )
+    );
 
     res.json({
       success: true,
-      collage: filename,
-      dimensions: {
-        width: canvasWidth,
-        height: canvasHeight,
-        cols: cols_num,
-        rows: rows,
-        tileWidth,
-        tileHeight,
+      collages: {
+        original,
+        lineProtocol,
       },
     });
   } catch (error) {
@@ -167,12 +180,33 @@ app.get("/api/download/:filename", (req, res) => {
   const filepath = path.join("output", filename);
 
   if (!fs.existsSync(filepath)) {
+    console.error(`File not found: ${filepath}`);
     return res.status(404).json({ error: "File not found" });
   }
 
-  res.setHeader("Content-Type", "image/png");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  res.sendFile(path.resolve(filepath));
+  try {
+    const stats = fs.statSync(filepath);
+    const stream = fs.createReadStream(filepath);
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Length", stats.size);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
+    stream.pipe(res);
+
+    stream.on("error", (err) => {
+      console.error(`Stream error for ${filepath}:`, err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Download error" });
+      }
+    });
+  } catch (error) {
+    console.error(`Download error for ${filepath}:`, error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Preview collage

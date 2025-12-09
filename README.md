@@ -2,7 +2,8 @@
 
 A Node.js web application that combines multiple images into customizable grid layouts with flexible export options.
 
-![Image Collage Maker Screenshot](./docs/screenshot.png)
+<img width="2522" height="4474" alt="image" src="https://github.com/user-attachments/assets/df9fc2e0-1d6d-4858-8582-a4ab89839af5" />
+
 
 ## Features
 
